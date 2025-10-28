@@ -16,13 +16,13 @@ def create_app() -> Flask:
 
     app.config.from_object('config.Config')
 
-    # CORS
-    cors_origins = os.getenv('CORS_ORIGINS')
-    if cors_origins:
-        origins = [o.strip() for o in cors_origins.split(',') if o.strip()]
-        CORS(app, resources={r"/api/*": {"origins": origins}})
-    else:
-        CORS(app)
+    # CORS - Allow all origins for development and production
+    CORS(app, resources={r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }})
 
     # Extensions
     db.init_app(app)
