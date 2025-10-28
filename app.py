@@ -17,12 +17,7 @@ def create_app() -> Flask:
     app.config.from_object('config.Config')
 
     # CORS - Allow all origins for development and production
-    CORS(app, resources={r"/api/*": {
-        "origins": "*",
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True
-    }})
+    CORS(app, origins="*", allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
     # Extensions
     db.init_app(app)
