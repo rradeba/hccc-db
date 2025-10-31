@@ -21,8 +21,18 @@ def list_customers_noslash():
 def create_customer():
     payload = request.get_json(silent=True) or {}
 
+    first_name = (payload.get('firstName') or payload.get('first_name') or '').strip()
+    last_name = (payload.get('lastName') or payload.get('last_name') or '').strip()
+    provided_name = (payload.get('name') or '').strip()
+    combined_name = provided_name or ' '.join(filter(None, [first_name, last_name])).strip()
+
+    if not combined_name:
+        return jsonify({'error': 'First name or last name is required'}), 400
+
     customer = Customer(
-        name=(payload.get('name') or '').strip(),
+        first_name=first_name or None,
+        last_name=last_name or None,
+        name=combined_name,
         email=(payload.get('email') or '').strip().lower() or None,
         phone=(payload.get('phone') or '').strip() or None,
         address=(payload.get('address') or '').strip() or None,
@@ -33,11 +43,8 @@ def create_customer():
         last_service=datetime.fromisoformat(payload['lastService']).date() if payload.get('lastService') else None,
         rating=int(payload.get('rating') or 5),
         services=payload.get('services') or [],
-        review_status=(payload.get('reviewStatus') or 'none').strip()
+        review_status=((payload.get('reviewStatus') or payload.get('review_status') or 'none').strip() or 'none')
     )
-
-    if not customer.name:
-        return jsonify({'error': 'Name is required'}), 400
 
     try:
         db.session.add(customer)
@@ -61,12 +68,37 @@ def update_customer(customer_id: int):
 
     payload = request.get_json(silent=True) or {}
 
+    first_name_value = payload.get('firstName') if 'firstName' in payload else payload.get('first_name') if 'first_name' in payload else None
+    last_name_value = payload.get('lastName') if 'lastName' in payload else payload.get('last_name') if 'last_name' in payload else None
+    name_value = payload.get('name') if 'name' in payload else None
+
+    if first_name_value is not None:
+        customer.first_name = first_name_value.strip() or None
+    if last_name_value is not None:
+        customer.last_name = last_name_value.strip() or None
+
+    if name_value is not None:
+        stripped = (name_value or '').strip()
+        if stripped:
+            customer.name = stripped
+        else:
+            full = ' '.join(filter(None, [customer.first_name or '', customer.last_name or ''])).strip()
+            if full:
+                customer.name = full
+    elif first_name_value is not None or last_name_value is not None:
+        full = ' '.join(filter(None, [customer.first_name or '', customer.last_name or ''])).strip()
+        if full:
+            customer.name = full
+
     review_status = payload.get('reviewStatus')
+    if review_status is None and 'review_status' in payload:
+        review_status = payload.get('review_status')
     rating = payload.get('rating')
     add_service = payload.get('addService')  # { type, date, amount }
 
     if review_status is not None:
-        customer.review_status = (review_status or 'none').strip()
+        cleaned_status = (review_status or '').strip()
+        customer.review_status = cleaned_status or 'none'
     if rating is not None:
         try:
             customer.rating = int(rating)
